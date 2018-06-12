@@ -24,7 +24,7 @@ RUN wget -qO- https://download.docker.com/linux/static/stable/x86_64/docker-$DOC
     rm -rf ./docker
 
 # Installs Hermes.
-ENV HERMES_VERSION "0.0.7"
+ENV HERMES_VERSION "0.0.8"
 RUN wget -qO- https://github.com/aenthill/hermes/releases/download/$HERMES_VERSION/hermes_linux_amd64.tar.gz | tar xvz -C . &&\
     mv ./hermes /usr/bin &&\
     rm -f LICENSE README.md
