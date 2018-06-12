@@ -1,6 +1,7 @@
 FROM thecodingmachine/php:7.2-v1-cli as builder
 
 COPY composer.json composer.json
+COPY composer.lock composer.lock
 
 RUN composer install --no-dev
 
@@ -23,13 +24,13 @@ RUN wget -qO- https://download.docker.com/linux/static/stable/x86_64/docker-$DOC
     rm -rf ./docker
 
 # Installs Hermes.
-ENV HERMES_VERSION "0.0.6"
+ENV HERMES_VERSION "0.0.7"
 RUN wget -qO- https://github.com/aenthill/hermes/releases/download/$HERMES_VERSION/hermes_linux_amd64.tar.gz | tar xvz -C . &&\
     mv ./hermes /usr/bin &&\
     rm -f LICENSE README.md
 
 # Installs Hercule.
-ENV HERCULE_VERSION "0.0.3"
+ENV HERCULE_VERSION "0.0.4"
 RUN wget -qO- https://github.com/aenthill/hercule/releases/download/$HERCULE_VERSION/hercule_linux_amd64.tar.gz | tar xvz -C . &&\
     mv ./hercule /usr/bin &&\
     rm -f LICENSE README.md
