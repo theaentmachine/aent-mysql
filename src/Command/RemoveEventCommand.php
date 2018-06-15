@@ -9,7 +9,7 @@ class RemoveEventCommand extends EventCommand
 {
     protected function getEventName(): string
     {
-        return EventEnum::REMOVE;
+        return 'REMOVE';
     }
 
     protected function executeEvent(?string $payload): void
