@@ -84,7 +84,7 @@ class AddEventCommand extends EventCommand
 
         $volumeName = trim($helper->ask($this->input, $this->output, $question));
 
-        $service->addNamedVolume('/var/lib/mysql', $volumeName);
+        $service->addNamedVolume($volumeName, '/var/lib/mysql');
 
         $commentEvents->dispatchService($service, $helper, $this->input, $this->output);
     }

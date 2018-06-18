@@ -24,16 +24,8 @@ RUN wget -qO- https://download.docker.com/linux/static/stable/x86_64/docker-$DOC
     rm -rf ./docker
 
 # Installs Hermes.
-ENV HERMES_VERSION "0.0.8"
-RUN wget -qO- https://github.com/aenthill/hermes/releases/download/$HERMES_VERSION/hermes_linux_amd64.tar.gz | tar xvz -C . &&\
-    mv ./hermes /usr/bin &&\
-    rm -f LICENSE README.md
-
-# Installs Hercule.
-ENV HERCULE_VERSION "0.0.4"
-RUN wget -qO- https://github.com/aenthill/hercule/releases/download/$HERCULE_VERSION/hercule_linux_amd64.tar.gz | tar xvz -C . &&\
-    mv ./hercule /usr/bin &&\
-    rm -f LICENSE README.md
+ENV HERMES_VERSION "0.0.11"
+RUN curl -sf https://raw.githubusercontent.com/aenthill/hermes/master/install.sh | BINDIR=/usr/bin sh -s $HERMES_VERSION
 
 # Copies our aent entry point.
 COPY aent.sh /usr/bin/aent
