@@ -3,6 +3,7 @@
 namespace TheAentMachine\AentMysql\Command;
 
 use Symfony\Component\Console\Question\ChoiceQuestion;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
 use TheAentMachine\CommonEvents;
 use TheAentMachine\EventCommand;
@@ -87,5 +88,55 @@ class AddEventCommand extends EventCommand
         $service->addNamedVolume($volumeName, '/var/lib/mysql');
 
         $commentEvents->dispatchService($service, $helper, $this->input, $this->output);
+
+        $this->output->writeln('<question>Hey!</question> You just installed MySQL. I can install <info>PHPMyAdmin</info> for you for the administration.');
+
+        $question = new ConfirmationQuestion('Do you want me to install PHPMyAdmin? [y] ', true);
+
+        if ($helper->ask($this->input, $this->output, $question)) {
+            $this->installPhpMyAdmin($serviceName, $password);
+        }
+    }
+
+    private function installPhpMyAdmin(string $mySqlServiceName, string $mySqlRootPassword): void
+    {
+        $helper = $this->getHelper('question');
+
+        $commentEvents = new CommonEvents();
+
+        $service = new Service();
+
+
+        // serviceName
+        $question = new Question('Please enter the name of the PHPMyAdmin service [phpmyadmin]: ', 'phpmyadmin');
+        $question->setValidator(function (string $value) {
+            $value = trim($value);
+            if (!\preg_match('/^[a-zA-Z0-9_.-]+$/', $value)) {
+                throw new \InvalidArgumentException('Invalid service name "'.$value.'". Service names can contain alphanumeric characters, and "_", ".", "-".');
+            }
+
+            return trim($value);
+        });
+
+        $serviceName = $helper->ask($this->input, $this->output, $question);
+        $service->setServiceName($serviceName);
+
+        // image
+        $registryClient = new RegistryClient();
+        $question = new ChoiceQuestion(
+            'Select your PHPMyAdmin version : (default to latest)',
+            $registryClient->getImageTagsOnDockerHub('phpmyadmin/phpmyadmin'),
+            0
+        );
+        $question->setErrorMessage('Version %s is invalid.');
+        $version = $helper->ask($this->input, $this->output, $question);
+        $image = 'phpmyadmin/phpmyadmin:' . $version;
+        $service->setImage($image);
+
+        $service->addContainerEnvVariable('PMA_HOST', $mySqlServiceName);
+        $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $mySqlRootPassword);
+
+        $commentEvents->dispatchService($service, $helper, $this->input, $this->output);
+        $commentEvents->dispatchNewVirtualHost($helper, $this->input, $this->output, $serviceName);
     }
 }
