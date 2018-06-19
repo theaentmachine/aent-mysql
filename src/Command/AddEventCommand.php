@@ -4,103 +4,139 @@ namespace TheAentMachine\AentMysql\Command;
 
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
-use TheAentMachine\AentMysql\Aenthill\AenthillUtils;
-use TheAentMachine\AentMysql\Aenthill\Enum\EventEnum;
-use TheAentMachine\AentMysql\Aenthill\Exception\RequiredAentMissingException;
-use TheAentMachine\AentMysql\Service\Enum\VolumeTypeEnum;
-use TheAentMachine\AentMysql\Service\Service;
+use Symfony\Component\Console\Question\Question;
+use TheAentMachine\CommonEvents;
 use TheAentMachine\EventCommand;
-use TheAentMachine\Hercule;
-use TheAentMachine\Hermes;
+use TheAentMachine\Registry\RegistryClient;
+use TheAentMachine\Service\Service;
 
 class AddEventCommand extends EventCommand
 {
     protected function getEventName(): string
     {
-        return EventEnum::ADD;
+        return 'ADD';
     }
 
     protected function executeEvent(?string $payload): void
     {
-        Hercule::setHandledEvents(EventEnum::getHandledEvents());
+        $helper = $this->getHelper('question');
 
-        $receiverAents = AenthillUtils::findAentsByHandledEvent(EventEnum::NEW_DOCKER_SERVICE_INFO);
-        if (count($receiverAents) === 0) {
-            throw new RequiredAentMissingException(EventEnum::NEW_DOCKER_SERVICE_INFO);
-        }
+        $commentEvents = new CommonEvents();
+        $commentEvents->canDispatchServiceOrFail($helper, $this->input, $this->output);
 
         $service = new Service();
 
-        $helper = $this->getHelper('question');
 
         // serviceName
-        $serviceName = CommandUtils::getAnswer($this->output, 'Service name : ');
+        $question = new Question('Please enter the name of the MySQL service [mysql]: ', 'mysql');
+        $question->setValidator(function (string $value) {
+            $value = trim($value);
+            if (!\preg_match('/^[a-zA-Z0-9_.-]+$/', $value)) {
+                throw new \InvalidArgumentException('Invalid service name "'.$value.'". Service names can contain alphanumeric characters, and "_", ".", "-".');
+            }
+
+            return trim($value);
+        });
+
+        $serviceName = $helper->ask($this->input, $this->output, $question);
         $service->setServiceName($serviceName);
 
         // image
+        $registryClient = new RegistryClient();
         $question = new ChoiceQuestion(
             'Select your mysql version : (default to latest)',
-            array('latest', '8.0.11', '8.0', '8', '5.7.22', '5.7', '5.6.40', '5.6', '5.5.60', '5.5', '5'),
+            $registryClient->getImageTagsOnDockerHub('mysql'),
             0
         );
         $question->setErrorMessage('Version %s is invalid.');
         $version = $helper->ask($this->input, $this->output, $question);
-        $image = 'mysql/mysql-server:' . $version;
+        $image = 'mysql:' . $version;
         $service->setImage($image);
 
         // environment
-        $envKeys = array('MYSQL_ROOT_PASSWORD', 'MYSQL_DATABASE');
-        $env = CommandUtils::getValueFromKeyArrayAnswer($this->output, 'Environment variables', $envKeys, '=');
-        $environment = array();
-        foreach ($env as $key => $value) {
-            $environment[] = array('key' => $key, 'value' => $value);
-        }
-        $service->setEnvironment($environment);
-
-        // volumes
-        $addVolumeQuestion = new ConfirmationQuestion(
-            "Do you want to add a volume ? [y/N]\n > ",
-            false
-        );
-
-        $volumes = array();
-
-        $doAddVolume = $helper->ask($this->input, $this->output, $addVolumeQuestion);
-        if ($doAddVolume) {
-            $addAnotherVolumeQuestion = new ConfirmationQuestion(
-                "Do you want to add another volume ? [y/N]\n > ",
-                false
-            );
-            $volumeTypeQuestion = new ChoiceQuestion(
-                'Select your volume\'s type : (default to 0)',
-                VolumeTypeEnum::getVolumeTypes(),
-                00
-            );
-            $volumeTypeQuestion->setErrorMessage('Type %s is invalid.');
-            $readOnlyQuestion = new ConfirmationQuestion(
-                "Is your volume read only ? [y/N]\n > ",
-                false
-            );
-            while ($doAddVolume) {
-                $type = $helper->ask($this->input, $this->output, $volumeTypeQuestion);
-                $source = CommandUtils::getAnswer($this->output, 'Your volume\'s source : ');
-                $target = CommandUtils::getAnswer($this->output, 'Your volume\'s target : ');
-                $readOnly = $helper->ask($this->input, $this->output, $readOnlyQuestion);
-                $volumes[] = array(
-                    'type' => $type,
-                    'source' => $source,
-                    'target' => $target,
-                    'readOnly' => $readOnly,
-                );
-                $doAddVolume = $helper->ask($this->input, $this->output, $addAnotherVolumeQuestion);
+        $question = new Question('Please enter the root password (will be stored in MYSQL_ROOT_PASSWORD environment variable) : ', '');
+        $question->setValidator(function (string $value) {
+            $value = trim($value);
+            if (empty($value)) {
+                throw new \InvalidArgumentException('You must specify a root password.');
             }
+
+            return trim($value);
+        });
+
+        $password = $helper->ask($this->input, $this->output, $question);
+        $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $password);
+        $this->output->writeln('');
+        $this->output->writeln('');
+
+        $this->output->writeln('Do you want to initialize an empty database on container first start?');
+        $question = new Question('If yes, please enter the database name (will be stored in MYSQL_DATABASE environment variable) : ', '');
+
+        $dbName = trim($helper->ask($this->input, $this->output, $question));
+        if (!empty($dbName)) {
+            $service->addSharedEnvVariable('MYSQL_DATABASE', $dbName);
         }
 
-        $service->setVolumes($volumes);
-        $servicePayload = $service->serialize(true);
+        $this->output->writeln('');
+        $this->output->writeln('');
 
-        $this->log->debug(json_encode($servicePayload, JSON_PRETTY_PRINT));
+        $this->output->writeln('MySQL data will be stored in a dedicated volume.');
+        $question = new Question('Please specify the volume name [mysql-data] : ', 'mysql-data');
 
-        Hermes::dispatchJson(EventEnum::NEW_DOCKER_SERVICE_INFO, $servicePayload);
+        $volumeName = trim($helper->ask($this->input, $this->output, $question));
+
+        $service->addNamedVolume($volumeName, '/var/lib/mysql');
+
+        $commentEvents->dispatchService($service, $helper, $this->input, $this->output);
+
+        $this->output->writeln('<question>Hey!</question> You just installed MySQL. I can install <info>PHPMyAdmin</info> for you for the administration.');
+
+        $question = new ConfirmationQuestion('Do you want me to install PHPMyAdmin? [y] ', true);
+
+        if ($helper->ask($this->input, $this->output, $question)) {
+            $this->installPhpMyAdmin($serviceName, $password);
+        }
+    }
+
+    private function installPhpMyAdmin(string $mySqlServiceName, string $mySqlRootPassword): void
+    {
+        $helper = $this->getHelper('question');
+
+        $commentEvents = new CommonEvents();
+
+        $service = new Service();
+
+
+        // serviceName
+        $question = new Question('Please enter the name of the PHPMyAdmin service [phpmyadmin]: ', 'phpmyadmin');
+        $question->setValidator(function (string $value) {
+            $value = trim($value);
+            if (!\preg_match('/^[a-zA-Z0-9_.-]+$/', $value)) {
+                throw new \InvalidArgumentException('Invalid service name "'.$value.'". Service names can contain alphanumeric characters, and "_", ".", "-".');
+            }
+
+            return trim($value);
+        });
+
+        $serviceName = $helper->ask($this->input, $this->output, $question);
+        $service->setServiceName($serviceName);
+
+        // image
+        $registryClient = new RegistryClient();
+        $question = new ChoiceQuestion(
+            'Select your PHPMyAdmin version : (default to latest)',
+            $registryClient->getImageTagsOnDockerHub('phpmyadmin/phpmyadmin'),
+            0
+        );
+        $question->setErrorMessage('Version %s is invalid.');
+        $version = $helper->ask($this->input, $this->output, $question);
+        $image = 'phpmyadmin/phpmyadmin:' . $version;
+        $service->setImage($image);
+
+        $service->addContainerEnvVariable('PMA_HOST', $mySqlServiceName);
+        $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $mySqlRootPassword);
+
+        $commentEvents->dispatchService($service, $helper, $this->input, $this->output);
+        $commentEvents->dispatchNewVirtualHost($helper, $this->input, $this->output, $serviceName);
     }
 }
