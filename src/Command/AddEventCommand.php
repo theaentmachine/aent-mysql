@@ -64,8 +64,8 @@ class AddEventCommand extends EventCommand
             return trim($value);
         });
 
-        $password = $helper->ask($this->input, $this->output, $question);
-        $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $password);
+        $rootPassword = $helper->ask($this->input, $this->output, $question);
+        $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $rootPassword);
         $this->output->writeln('');
         $this->output->writeln('');
 
@@ -79,6 +79,41 @@ class AddEventCommand extends EventCommand
 
         $this->output->writeln('');
         $this->output->writeln('');
+
+        $userName = null;
+        $password = null;
+        $question = new ConfirmationQuestion('Do you want to create an additional (non root) user? [y] ');
+        if ($helper->ask($this->input, $this->output, $question)) {
+            $question = new Question('Please enter the name of the user : ', '');
+            $question->setValidator(function (string $value) {
+                $value = trim($value);
+                if (empty($value)) {
+                    throw new \InvalidArgumentException('You must specify a user name.');
+                }
+
+                return trim($value);
+            });
+
+            $userName = $helper->ask($this->input, $this->output, $question);
+            $service->addSharedEnvVariable('MYSQL_USER', $userName);
+            $this->output->writeln('');
+            $this->output->writeln('');
+
+            $question = new Question('Please enter the password : ', '');
+            $question->setValidator(function (string $value) {
+                $value = trim($value);
+                if (empty($value)) {
+                    throw new \InvalidArgumentException('You must specify a password.');
+                }
+
+                return trim($value);
+            });
+
+            $password = $helper->ask($this->input, $this->output, $question);
+            $service->addSharedSecret('MYSQL_PASSWORD', $password);
+            $this->output->writeln('');
+            $this->output->writeln('');
+        }
 
         $this->output->writeln('MySQL data will be stored in a dedicated volume.');
         $question = new Question('Please specify the volume name [mysql-data] : ', 'mysql-data');
@@ -94,11 +129,11 @@ class AddEventCommand extends EventCommand
         $question = new ConfirmationQuestion('Do you want me to install PHPMyAdmin? [y] ', true);
 
         if ($helper->ask($this->input, $this->output, $question)) {
-            $this->installPhpMyAdmin($serviceName, $password);
+            $this->installPhpMyAdmin($serviceName, $rootPassword, $userName, $password);
         }
     }
 
-    private function installPhpMyAdmin(string $mySqlServiceName, string $mySqlRootPassword): void
+    private function installPhpMyAdmin(string $mySqlServiceName, string $mySqlRootPassword, ?string $userName, ?string $password): void
     {
         $helper = $this->getHelper('question');
 
@@ -135,6 +170,13 @@ class AddEventCommand extends EventCommand
 
         $service->addContainerEnvVariable('PMA_HOST', $mySqlServiceName);
         $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $mySqlRootPassword);
+
+        if ($userName !== null) {
+            $service->addSharedEnvVariable('MYSQL_USER', $userName);
+        }
+        if ($password !== null) {
+            $service->addSharedSecret('MYSQL_PASSWORD', $password);
+        }
 
         $commentEvents->dispatchService($service, $helper, $this->input, $this->output);
         $commentEvents->dispatchNewVirtualHost($helper, $this->input, $this->output, $serviceName);
