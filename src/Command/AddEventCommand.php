@@ -8,6 +8,7 @@ use Symfony\Component\Console\Question\Question;
 use TheAentMachine\CommonEvents;
 use TheAentMachine\EventCommand;
 use TheAentMachine\Registry\RegistryClient;
+use TheAentMachine\Registry\TagsAnalyzer;
 use TheAentMachine\Service\Service;
 
 class AddEventCommand extends EventCommand
@@ -43,12 +44,30 @@ class AddEventCommand extends EventCommand
 
         // image
         $registryClient = new RegistryClient();
-        $question = new ChoiceQuestion(
-            'Select your mysql version : (default to latest)',
-            $registryClient->getImageTagsOnDockerHub('mysql'),
-            0
+        $availableVersions = $registryClient->getImageTagsOnDockerHub('mysql');
+
+        $tagsAnalyzer = new TagsAnalyzer();
+        $proposedTags = $tagsAnalyzer->filterBestTags($availableVersions);
+        $this->output->writeln('Please choose your MySQL version. Possible values include: <info>'.\implode(', ', $proposedTags).'</info>');
+        $this->output->writeln('Enter "v" to view all available versions');
+        $question = new Question(
+            'Select your mysql version : (default to latest) ',
+            'latest'
         );
-        $question->setErrorMessage('Version %s is invalid.');
+        $question->setAutocompleterValues($availableVersions);
+        $question->setValidator(function (string $value) use ($availableVersions) {
+            $value = trim($value);
+
+            if ($value === 'v') {
+                throw new \InvalidArgumentException("Available versions: ".\implode(', ', $availableVersions));
+            }
+
+            if (!\in_array($value, $availableVersions)) {
+                throw new \InvalidArgumentException("Version '$value' is invalid.");
+            }
+
+            return $value;
+        });
         $version = $helper->ask($this->input, $this->output, $question);
         $image = 'mysql:' . $version;
         $service->setImage($image);
