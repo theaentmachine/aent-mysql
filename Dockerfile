@@ -24,7 +24,7 @@ RUN wget -qO- https://download.docker.com/linux/static/stable/x86_64/docker-$DOC
     rm -rf ./docker
 
 # Installs Hermes.
-ENV HERMES_VERSION "0.0.12"
+ENV HERMES_VERSION "0.0.13"
 RUN curl -sf https://raw.githubusercontent.com/aenthill/hermes/master/install.sh | BINDIR=/usr/bin sh -s $HERMES_VERSION
 
 # Copies our aent entry point.

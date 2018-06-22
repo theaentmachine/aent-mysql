@@ -18,7 +18,7 @@ class AddEventCommand extends EventCommand
         return 'ADD';
     }
 
-    protected function executeEvent(?string $payload): void
+    protected function executeEvent(?string $payload): ?string
     {
         $helper = $this->getHelper('question');
 
@@ -150,6 +150,8 @@ class AddEventCommand extends EventCommand
         if ($helper->ask($this->input, $this->output, $question)) {
             $this->installPhpMyAdmin($serviceName, $rootPassword, $userName, $password);
         }
+
+        return null;
     }
 
     private function installPhpMyAdmin(string $mySqlServiceName, string $mySqlRootPassword, ?string $userName, ?string $password): void
@@ -198,6 +200,10 @@ class AddEventCommand extends EventCommand
         }
 
         $commentEvents->dispatchService($service, $helper, $this->input, $this->output);
-        $commentEvents->dispatchNewVirtualHost($helper, $this->input, $this->output, $serviceName);
+        $virtualHosts = $commentEvents->dispatchNewVirtualHost($helper, $this->input, $this->output, $serviceName);
+
+        $this->output->writeln('Virtual hosts for phpmyadmin: '.\implode(', ', array_map(function (array $response) {
+            return $response['virtualHost'];
+        }, $virtualHosts)));
     }
 }
