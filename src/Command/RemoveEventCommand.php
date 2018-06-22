@@ -12,8 +12,9 @@ class RemoveEventCommand extends EventCommand
         return 'REMOVE';
     }
 
-    protected function executeEvent(?string $payload): void
+    protected function executeEvent(?string $payload): ?string
     {
         // TODO
+        return null;
     }
 }

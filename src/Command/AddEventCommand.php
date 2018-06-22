@@ -8,6 +8,7 @@ use Symfony\Component\Console\Question\Question;
 use TheAentMachine\CommonEvents;
 use TheAentMachine\EventCommand;
 use TheAentMachine\Registry\RegistryClient;
+use TheAentMachine\Registry\TagsAnalyzer;
 use TheAentMachine\Service\Service;
 
 class AddEventCommand extends EventCommand
@@ -17,7 +18,7 @@ class AddEventCommand extends EventCommand
         return 'ADD';
     }
 
-    protected function executeEvent(?string $payload): void
+    protected function executeEvent(?string $payload): ?string
     {
         $helper = $this->getHelper('question');
 
@@ -43,12 +44,30 @@ class AddEventCommand extends EventCommand
 
         // image
         $registryClient = new RegistryClient();
-        $question = new ChoiceQuestion(
-            'Select your mysql version : (default to latest)',
-            $registryClient->getImageTagsOnDockerHub('mysql'),
-            0
+        $availableVersions = $registryClient->getImageTagsOnDockerHub('mysql');
+
+        $tagsAnalyzer = new TagsAnalyzer();
+        $proposedTags = $tagsAnalyzer->filterBestTags($availableVersions);
+        $this->output->writeln('Please choose your MySQL version. Possible values include: <info>'.\implode(', ', $proposedTags).'</info>');
+        $this->output->writeln('Enter "v" to view all available versions');
+        $question = new Question(
+            'Select your mysql version : (default to latest) ',
+            'latest'
         );
-        $question->setErrorMessage('Version %s is invalid.');
+        $question->setAutocompleterValues($availableVersions);
+        $question->setValidator(function (string $value) use ($availableVersions) {
+            $value = trim($value);
+
+            if ($value === 'v') {
+                throw new \InvalidArgumentException("Available versions: ".\implode(', ', $availableVersions));
+            }
+
+            if (!\in_array($value, $availableVersions)) {
+                throw new \InvalidArgumentException("Version '$value' is invalid.");
+            }
+
+            return $value;
+        });
         $version = $helper->ask($this->input, $this->output, $question);
         $image = 'mysql:' . $version;
         $service->setImage($image);
@@ -131,6 +150,8 @@ class AddEventCommand extends EventCommand
         if ($helper->ask($this->input, $this->output, $question)) {
             $this->installPhpMyAdmin($serviceName, $rootPassword, $userName, $password);
         }
+
+        return null;
     }
 
     private function installPhpMyAdmin(string $mySqlServiceName, string $mySqlRootPassword, ?string $userName, ?string $password): void
@@ -179,6 +200,10 @@ class AddEventCommand extends EventCommand
         }
 
         $commentEvents->dispatchService($service, $helper, $this->input, $this->output);
-        $commentEvents->dispatchNewVirtualHost($helper, $this->input, $this->output, $serviceName);
+        $virtualHosts = $commentEvents->dispatchNewVirtualHost($helper, $this->input, $this->output, $serviceName);
+
+        $this->output->writeln('Virtual hosts for phpmyadmin: '.\implode(', ', array_map(function (array $response) {
+            return $response['virtualHost'];
+        }, $virtualHosts)));
     }
 }
