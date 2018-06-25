@@ -1,0 +1,20 @@
+{
+	"aents": [
+		{
+			"image": "theaentmachine/aent-mysql",
+			"handled_events": [
+				"ADD",
+				"REMOVE"
+			]
+		},
+		{
+			"image": "theaentmachine/aent-docker-compose",
+			"handled_events": [
+				"ADD",
+				"REMOVE",
+				"NEW_DOCKER_SERVICE_INFO",
+				"DELETE_DOCKER_SERVICE"
+			]
+		}
+	]
+}
