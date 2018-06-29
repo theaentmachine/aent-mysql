@@ -13,6 +13,9 @@ class AddEventCommand extends EventCommand
         return 'ADD';
     }
 
+    /**
+     * @throws \TheAentMachine\Exception\CannotHandleEventException
+     */
     protected function executeEvent(?string $payload): ?string
     {
         $aentHelper = $this->getAentHelper();
@@ -21,10 +24,8 @@ class AddEventCommand extends EventCommand
         $this->output->writeln('      🐬🐬🐬      ');
         $this->output->writeln('');
 
-        $helper = $this->getHelper('question');
-
-        $commentEvents = new CommonEvents();
-        $commentEvents->canDispatchServiceOrFail($helper, $this->input, $this->output);
+        $commentEvents = new CommonEvents($aentHelper, $this->output);
+        $commentEvents->canDispatchServiceOrFail();
 
         $service = new Service();
 
@@ -102,7 +103,7 @@ class AddEventCommand extends EventCommand
             ->ask());
         $service->addNamedVolume($volumeName, '/var/lib/mysql');
 
-        $commentEvents->dispatchService($service, $helper, $this->input, $this->output);
+        $commentEvents->dispatchService($service);
 
         $this->output->writeln('<question>Hey!</question> You just installed MySQL. I can install <info>PHPMyAdmin</info> for you for the administration.');
 
@@ -119,15 +120,16 @@ class AddEventCommand extends EventCommand
         return null;
     }
 
+    /**
+     * @throws \TheAentMachine\Exception\CannotHandleEventException
+     */
     private function installPhpMyAdmin(string $mySqlServiceName, string $mySqlRootPassword, ?string $userName, ?string $password): void
     {
         $aentHelper = $this->getAentHelper();
-        $helper = $this->getHelper('question');
 
-        $commentEvents = new CommonEvents();
+        $commentEvents = new CommonEvents($aentHelper, $this->output);
 
         $service = new Service();
-
 
         // serviceName
         $serviceName = $aentHelper->askForServiceName('phpmyadmin', 'PHPMyAdmin');
@@ -148,8 +150,8 @@ class AddEventCommand extends EventCommand
             $service->addSharedSecret('MYSQL_PASSWORD', $password);
         }
 
-        $commentEvents->dispatchService($service, $helper, $this->input, $this->output);
-        $virtualHosts = $commentEvents->dispatchNewVirtualHost($helper, $this->input, $this->output, $serviceName);
+        $commentEvents->dispatchService($service);
+        $virtualHosts = $commentEvents->dispatchNewVirtualHost($serviceName);
 
         $this->output->writeln('Virtual hosts for phpmyadmin: '.\implode(', ', array_map(function (array $response) {
             return $response['virtualHost'];
