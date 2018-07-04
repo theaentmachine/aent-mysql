@@ -151,7 +151,7 @@ class AddEventCommand extends EventCommand
         }
 
         $commentEvents->dispatchService($service);
-        $virtualHosts = $commentEvents->dispatchNewVirtualHost($serviceName);
+        $virtualHosts = $commentEvents->dispatchNewVirtualHost($serviceName) ?? [];
 
         $this->output->writeln('Virtual hosts for phpmyadmin: '.\implode(', ', array_map(function (array $response) {
             return $response['virtualHost'];
