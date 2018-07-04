@@ -2,7 +2,6 @@
 
 namespace TheAentMachine\AentMysql\Command;
 
-use TheAentMachine\AentMysql\Aenthill\Enum\EventEnum;
 use TheAentMachine\EventCommand;
 
 class RemoveEventCommand extends EventCommand
