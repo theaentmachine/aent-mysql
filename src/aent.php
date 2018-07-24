@@ -4,12 +4,10 @@
 require __DIR__ . '/../vendor/autoload.php';
 
 use TheAentMachine\AentApplication;
-use TheAentMachine\AentMysql\Command\AddEventCommand;
-use TheAentMachine\AentMysql\Command\RemoveEventCommand;
+use TheAentMachine\AentMysql\Command\StartEventCommand;
 
 $application = new AentApplication();
 
-$application->add(new AddEventCommand());
-$application->add(new RemoveEventCommand());
+$application->add(new StartEventCommand());
 
 $application->run();
