@@ -2,15 +2,15 @@
 
 namespace TheAentMachine\AentMysql\Command;
 
+use TheAentMachine\Command\EventCommand;
 use TheAentMachine\CommonEvents;
-use TheAentMachine\EventCommand;
 use TheAentMachine\Service\Service;
 
-class AddEventCommand extends EventCommand
+class StartEventCommand extends EventCommand
 {
     protected function getEventName(): string
     {
-        return 'ADD';
+        return 'START';
     }
 
     /**
@@ -19,22 +19,15 @@ class AddEventCommand extends EventCommand
     protected function executeEvent(?string $payload): ?string
     {
         $aentHelper = $this->getAentHelper();
-        $aentHelper->title('Installing MySQL');
-        $this->output->writeln('');
-        $this->output->writeln('      🐬🐬🐬      ');
-        $this->output->writeln('');
+        $aentHelper->title('Adding a new MySQL service');
 
         $commentEvents = new CommonEvents($aentHelper, $this->output);
-        $commentEvents->canDispatchServiceOrFail();
+        $environments = $this->getAentHelper()->askForEnvironments();
 
         $service = new Service();
-
-
         // serviceName
         $serviceName = $aentHelper->askForServiceName('mysql', 'MySQL');
         $service->setServiceName($serviceName);
-
-        $aentHelper->spacer();
 
         // image
         $version = $aentHelper->askForTag('mysql', 'MySQL');
@@ -105,6 +98,7 @@ class AddEventCommand extends EventCommand
 
         $commentEvents->dispatchService($service);
 
+        $this->getAentHelper()->spacer();
         $this->output->writeln('<question>Hey!</question> You just installed MySQL. I can install <info>PHPMyAdmin</info> for you for the administration.');
 
         $isPhpMyAdmin = $isAdditionalUser = $this->getAentHelper()
@@ -116,7 +110,6 @@ class AddEventCommand extends EventCommand
         if ($isPhpMyAdmin) {
             $this->installPhpMyAdmin($serviceName, $rootPassword, $userName, $password);
         }
-
         return null;
     }
 
@@ -126,7 +119,6 @@ class AddEventCommand extends EventCommand
     private function installPhpMyAdmin(string $mySqlServiceName, string $mySqlRootPassword, ?string $userName, ?string $password): void
     {
         $aentHelper = $this->getAentHelper();
-
         $commentEvents = new CommonEvents($aentHelper, $this->output);
 
         $service = new Service();
@@ -150,11 +142,14 @@ class AddEventCommand extends EventCommand
             $service->addSharedSecret('MYSQL_PASSWORD', $password);
         }
 
+        $service->setNeedVirtualHost(true);
         $commentEvents->dispatchService($service);
-        $virtualHosts = $commentEvents->dispatchNewVirtualHost($serviceName) ?? [];
 
-        $this->output->writeln('Virtual hosts for phpmyadmin: '.\implode(', ', array_map(function (array $response) {
-            return $response['virtualHost'];
+        /*
+        $virtualHosts = $commentEvents->dispatchNewVirtualHost($serviceName) ?? [];
+        $this->output->writeln('Virtual hosts for phpmyadmin: ' . \implode(', ', array_map(function (array $response) {
+                return $response['virtualHost'];
         }, $virtualHosts)));
+        */
     }
 }
