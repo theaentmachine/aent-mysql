@@ -2,6 +2,7 @@
 
 namespace TheAentMachine\AentMysql\Command;
 
+use TheAentMachine\Aenthill\Metadata;
 use TheAentMachine\Command\EventCommand;
 use TheAentMachine\CommonEvents;
 use TheAentMachine\Service\Service;
@@ -13,18 +14,23 @@ class StartEventCommand extends EventCommand
         return 'START';
     }
 
-    /**
-     * @throws \TheAentMachine\Exception\CannotHandleEventException
-     */
     protected function executeEvent(?string $payload): ?string
     {
         $aentHelper = $this->getAentHelper();
         $aentHelper->title('Adding a new MySQL service');
-
-        $commentEvents = new CommonEvents($aentHelper, $this->output);
-        $environments = $this->getAentHelper()->askForEnvironments();
-
         $service = new Service();
+
+        $environments = $this->getAentHelper()->askForEnvironments();
+        $envTypes = [];
+        if (null !== $environments) {
+            $envTypes = array_map(function ($env) {
+                return $env[Metadata::ENV_TYPE_KEY];
+            }, $environments);
+            foreach ($envTypes as $envType) {
+                $service->addDestEnvType($envType);
+            }
+        }
+
         // serviceName
         $serviceName = $aentHelper->askForServiceName('mysql', 'MySQL');
         $service->setServiceName($serviceName);
@@ -34,7 +40,7 @@ class StartEventCommand extends EventCommand
         $image = 'mysql:' . $version;
         $service->setImage($image);
 
-        // environment
+        // environment var
         $rootPassword = $this->getAentHelper()
             ->question('Root password')
             ->compulsory()
@@ -96,9 +102,15 @@ class StartEventCommand extends EventCommand
             ->ask());
         $service->addNamedVolume($volumeName, '/var/lib/mysql');
 
+        $commentEvents = new CommonEvents($aentHelper, $this->output);
         $commentEvents->dispatchService($service);
 
         $this->getAentHelper()->spacer();
+
+        if (count($envTypes) === 1 && $envTypes[0] === Metadata::ENV_TYPE_PROD) {
+            return null;
+        }
+
         $this->output->writeln('<question>Hey!</question> You just installed MySQL. I can install <info>PHPMyAdmin</info> for you for the administration.');
 
         $isPhpMyAdmin = $isAdditionalUser = $this->getAentHelper()
@@ -108,20 +120,23 @@ class StartEventCommand extends EventCommand
             ->ask();
 
         if ($isPhpMyAdmin) {
-            $this->installPhpMyAdmin($serviceName, $rootPassword, $userName, $password);
+            $this->installPhpMyAdmin($serviceName, $rootPassword, $userName, $password, $envTypes);
         }
         return null;
     }
 
     /**
-     * @throws \TheAentMachine\Exception\CannotHandleEventException
+     * @param string[] $envTypes
      */
-    private function installPhpMyAdmin(string $mySqlServiceName, string $mySqlRootPassword, ?string $userName, ?string $password): void
+    private function installPhpMyAdmin(string $mySqlServiceName, string $mySqlRootPassword, ?string $userName, ?string $password, array $envTypes = []): void
     {
         $aentHelper = $this->getAentHelper();
         $commentEvents = new CommonEvents($aentHelper, $this->output);
 
         $service = new Service();
+        foreach ($envTypes as $envType) {
+            $service->addDestEnvType($envType);
+        }
 
         // serviceName
         $serviceName = $aentHelper->askForServiceName('phpmyadmin', 'PHPMyAdmin');
