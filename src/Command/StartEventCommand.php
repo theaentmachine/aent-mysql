@@ -2,29 +2,34 @@
 
 namespace TheAentMachine\AentMysql\Command;
 
-use TheAentMachine\Aenthill\Metadata;
-use TheAentMachine\Command\EventCommand;
-use TheAentMachine\CommonEvents;
+use TheAentMachine\Aenthill\CommonEvents;
+use TheAentMachine\Aenthill\CommonMetadata;
+use TheAentMachine\Command\AbstractEventCommand;
 use TheAentMachine\Service\Service;
 
-class StartEventCommand extends EventCommand
+class StartEventCommand extends AbstractEventCommand
 {
     protected function getEventName(): string
     {
-        return 'START';
+        return CommonEvents::START_EVENT;
     }
 
+    /**
+     * @param null|string $payload
+     * @return null|string
+     * @throws \TheAentMachine\Exception\CommonAentsException
+     */
     protected function executeEvent(?string $payload): ?string
     {
         $aentHelper = $this->getAentHelper();
         $aentHelper->title('Adding a new MySQL service');
         $service = new Service();
 
-        $environments = $this->getAentHelper()->askForEnvironments();
+        $environments = $aentHelper->getCommonQuestions()->askForEnvironments();
         $envTypes = [];
         if (null !== $environments) {
             $envTypes = array_map(function ($env) {
-                return $env[Metadata::ENV_TYPE_KEY];
+                return $env[CommonMetadata::ENV_TYPE_KEY];
             }, $environments);
             foreach ($envTypes as $envType) {
                 $service->addDestEnvType($envType);
@@ -32,11 +37,11 @@ class StartEventCommand extends EventCommand
         }
 
         // serviceName
-        $serviceName = $aentHelper->askForServiceName('mysql', 'MySQL');
+        $serviceName = $aentHelper->getCommonQuestions()->askForServiceName('mysql', 'MySQL');
         $service->setServiceName($serviceName);
 
         // image
-        $version = $aentHelper->askForTag('mysql', 'MySQL');
+        $version = $aentHelper->getCommonQuestions()->askForDockerImageTag('mysql', 'MySQL');
         $image = 'mysql:' . $version;
         $service->setImage($image);
 
@@ -102,12 +107,11 @@ class StartEventCommand extends EventCommand
             ->ask());
         $service->addNamedVolume($volumeName, '/var/lib/mysql');
 
-        $commentEvents = new CommonEvents($aentHelper, $this->output);
-        $commentEvents->dispatchService($service);
+        CommonEvents::dispatchService($service);
 
         $this->getAentHelper()->spacer();
 
-        if (count($envTypes) === 1 && $envTypes[0] === Metadata::ENV_TYPE_PROD) {
+        if (count($envTypes) === 1 && $envTypes[0] === CommonMetadata::ENV_TYPE_PROD) {
             return null;
         }
 
@@ -131,7 +135,6 @@ class StartEventCommand extends EventCommand
     private function installPhpMyAdmin(string $mySqlServiceName, string $mySqlRootPassword, ?string $userName, ?string $password, array $envTypes = []): void
     {
         $aentHelper = $this->getAentHelper();
-        $commentEvents = new CommonEvents($aentHelper, $this->output);
 
         $service = new Service();
         foreach ($envTypes as $envType) {
@@ -139,11 +142,11 @@ class StartEventCommand extends EventCommand
         }
 
         // serviceName
-        $serviceName = $aentHelper->askForServiceName('phpmyadmin', 'PHPMyAdmin');
+        $serviceName = $aentHelper->getCommonQuestions()->askForServiceName('phpmyadmin', 'PHPMyAdmin');
         $service->setServiceName($serviceName);
 
         // image
-        $version = $aentHelper->askForTag('phpmyadmin/phpmyadmin', 'PHPMyAdmin');
+        $version = $aentHelper->getCommonQuestions()->askForDockerImageTag('phpmyadmin/phpmyadmin', 'PHPMyAdmin');
         $image = 'phpmyadmin/phpmyadmin:' . $version;
         $service->setImage($image);
 
@@ -158,13 +161,6 @@ class StartEventCommand extends EventCommand
         }
 
         $service->setNeedVirtualHost(true);
-        $commentEvents->dispatchService($service);
-
-        /*
-        $virtualHosts = $commentEvents->dispatchNewVirtualHost($serviceName) ?? [];
-        $this->output->writeln('Virtual hosts for phpmyadmin: ' . \implode(', ', array_map(function (array $response) {
-                return $response['virtualHost'];
-        }, $virtualHosts)));
-        */
+        CommonEvents::dispatchService($service);
     }
 }
