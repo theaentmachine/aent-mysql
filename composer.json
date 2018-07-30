@@ -5,9 +5,14 @@
   "license": "MIT",
   "authors": [
     {
-      "name": "Julien Neuhart",
-      "email": "j.neuhart@thecodingmachine.com",
-      "homepage": "https://github.com/gulien"
+      "name": "Jindun Shao",
+      "email": "j.shao@thecodingmachine.com",
+      "homepage": "https://github.com/JinTotonic"
+    },
+    {
+      "name" : "David Négrier",
+      "email" : "d.negrier@thecodingmachine.com",
+      "homepage" : "https://github.com/moufmouf"
     }
   ],
   "require": {
