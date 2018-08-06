@@ -52,7 +52,7 @@ class StartEventCommand extends AbstractEventCommand
             ->setHelpText('The MySQL root password will be stored in the MYSQL_ROOT_PASSWORD environment variable.')
             ->ask();
 
-        $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $rootPassword);
+        $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $rootPassword, 'The password for the root user of MySQL');
         $this->output->writeln('');
         $this->output->writeln('');
 
@@ -69,7 +69,7 @@ class StartEventCommand extends AbstractEventCommand
                 ->compulsory()
                 ->setHelpText('The database name will be stored in the MYSQL_DATABASE environment variable.')
                 ->ask();
-            $service->addSharedEnvVariable('MYSQL_DATABASE', trim($dbName));
+            $service->addSharedEnvVariable('MYSQL_DATABASE', trim($dbName), 'A default database, created on MySQL first startup');
         }
 
         $userName = null;
@@ -87,7 +87,7 @@ class StartEventCommand extends AbstractEventCommand
                 ->setHelpText('The database user name will be stored in the MYSQL_USER environment variable.')
                 ->ask());
 
-            $service->addSharedEnvVariable('MYSQL_USER', $userName);
+            $service->addSharedEnvVariable('MYSQL_USER', $userName, 'A default user, created on MySQL first startup');
 
             $password = trim($this->getAentHelper()
                 ->question('User password')
@@ -95,7 +95,7 @@ class StartEventCommand extends AbstractEventCommand
                 ->setHelpText('The password will be stored in the MYSQL_PASSWORD environment variable.')
                 ->ask());
 
-            $service->addSharedSecret('MYSQL_PASSWORD', $password);
+            $service->addSharedSecret('MYSQL_PASSWORD', $password, 'The password of the default user, created on MySQL first startup');
         }
 
         $this->output->writeln('MySQL data will be stored in a dedicated volume.');
@@ -105,7 +105,7 @@ class StartEventCommand extends AbstractEventCommand
             ->setDefault('mysql-data')
             ->setHelpText('The database files (located in the container in the /var/lib/mysql folder) will be stored in an external Docker volume.')
             ->ask());
-        $service->addNamedVolume($volumeName, '/var/lib/mysql');
+        $service->addNamedVolume($volumeName, '/var/lib/mysql', false, 'This volume contains the whole MySQL data.');
 
         CommonEvents::dispatchService($service);
 
