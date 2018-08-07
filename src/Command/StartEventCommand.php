@@ -52,7 +52,7 @@ class StartEventCommand extends AbstractEventCommand
             ->setHelpText('The MySQL root password will be stored in the MYSQL_ROOT_PASSWORD environment variable.')
             ->ask();
 
-        $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $rootPassword, 'The password for the root user of MySQL');
+        $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $rootPassword, 'The password for the root user of MySQL', $serviceName);
         $this->output->writeln('');
         $this->output->writeln('');
 
@@ -69,7 +69,7 @@ class StartEventCommand extends AbstractEventCommand
                 ->compulsory()
                 ->setHelpText('The database name will be stored in the MYSQL_DATABASE environment variable.')
                 ->ask();
-            $service->addSharedEnvVariable('MYSQL_DATABASE', trim($dbName), 'A default database, created on MySQL first startup');
+            $service->addSharedEnvVariable('MYSQL_DATABASE', trim($dbName), 'A default database, created on MySQL first startup', $serviceName);
         }
 
         $userName = null;
@@ -87,7 +87,7 @@ class StartEventCommand extends AbstractEventCommand
                 ->setHelpText('The database user name will be stored in the MYSQL_USER environment variable.')
                 ->ask());
 
-            $service->addSharedEnvVariable('MYSQL_USER', $userName, 'A default user, created on MySQL first startup');
+            $service->addSharedEnvVariable('MYSQL_USER', $userName, 'A default user, created on MySQL first startup', $serviceName);
 
             $password = trim($this->getAentHelper()
                 ->question('User password')
@@ -95,7 +95,7 @@ class StartEventCommand extends AbstractEventCommand
                 ->setHelpText('The password will be stored in the MYSQL_PASSWORD environment variable.')
                 ->ask());
 
-            $service->addSharedSecret('MYSQL_PASSWORD', $password, 'The password of the default user, created on MySQL first startup');
+            $service->addSharedSecret('MYSQL_PASSWORD', $password, 'The password of the default user, created on MySQL first startup', $serviceName);
         }
 
         $this->output->writeln('MySQL data will be stored in a dedicated volume.');
@@ -151,16 +151,16 @@ class StartEventCommand extends AbstractEventCommand
         $service->setImage($image);
 
         $service->addContainerEnvVariable('PMA_HOST', $mySqlServiceName);
-        $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $mySqlRootPassword);
+        $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $mySqlRootPassword, null, $mySqlServiceName);
 
         if ($userName !== null) {
-            $service->addSharedEnvVariable('MYSQL_USER', $userName);
+            $service->addSharedEnvVariable('MYSQL_USER', $userName, null, $mySqlServiceName);
         }
         if ($password !== null) {
-            $service->addSharedSecret('MYSQL_PASSWORD', $password);
+            $service->addSharedSecret('MYSQL_PASSWORD', $password, null, $mySqlServiceName);
         }
 
-        $service->setNeedVirtualHost(true);
+        $service->addVirtualHost(null, 80, 'The URL to access PHPMyAdmin');
         CommonEvents::dispatchService($service);
     }
 }
