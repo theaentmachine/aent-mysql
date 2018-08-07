@@ -1,2 +1,4 @@
 vendor
 tests/docker-compose.yml
+.phpunit.result.cache
+clover.xml
