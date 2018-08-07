@@ -54,7 +54,6 @@ class StartEventCommand extends AbstractEventCommand
 
         $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $rootPassword, 'The password for the root user of MySQL');
         $this->output->writeln('');
-        $this->output->writeln('');
 
         $isDbInit = $this->getAentHelper()
             ->question('Initialize database?')
@@ -151,16 +150,16 @@ class StartEventCommand extends AbstractEventCommand
         $service->setImage($image);
 
         $service->addContainerEnvVariable('PMA_HOST', $mySqlServiceName);
-        $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $mySqlRootPassword);
+        $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $mySqlRootPassword, 'The password for the root user of MySQL');
 
         if ($userName !== null) {
-            $service->addSharedEnvVariable('MYSQL_USER', $userName);
+            $service->addSharedEnvVariable('MYSQL_USER', $userName, 'A default user, created on MySQL first startup');
         }
         if ($password !== null) {
-            $service->addSharedSecret('MYSQL_PASSWORD', $password);
+            $service->addSharedSecret('MYSQL_PASSWORD', $password, 'The password of the default user, created on MySQL first startup');
         }
 
-        $service->setNeedVirtualHost(true);
+        $service->addVirtualHost(null, 80, null);
         CommonEvents::dispatchService($service);
     }
 }
