@@ -155,6 +155,8 @@ class StartEventCommand extends AbstractEventCommand
         $image = 'phpmyadmin/phpmyadmin:' . $version;
         $service->setImage($image);
 
+        $service->addInternalPort(80);
+
         $service->addContainerEnvVariable('PMA_HOST', $mySqlServiceName);
         $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $mySqlRootPassword, null, $mySqlServiceName);
 
