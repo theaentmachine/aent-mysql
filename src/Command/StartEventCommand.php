@@ -45,6 +45,8 @@ class StartEventCommand extends AbstractEventCommand
         $image = 'mysql:' . $version;
         $service->setImage($image);
 
+        $service->addInternalPort(3306);
+
         // environment var
         $rootPassword = $this->getAentHelper()
             ->question('Root password')
