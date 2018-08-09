@@ -48,6 +48,7 @@ class StartEventCommand extends AbstractEventCommand
         $service->addInternalPort(3306);
         // Argument necessary on Kubernetes clusters (the volume has a lost+found dir at the root)
         $service->addCommand('--ignore-db-dir=lost+found');
+        $service->addCommand('--max_allowed_packet=512M');
 
         // environment var
         $rootPassword = $this->getAentHelper()
