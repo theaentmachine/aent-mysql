@@ -167,6 +167,11 @@ class StartEventCommand extends AbstractEventCommand
             $service->addSharedSecret('MYSQL_PASSWORD', $password, null, $mySqlServiceName);
         }
 
+        $service->setLimitCpu('1');
+        $service->setLimitMemory('1G');
+        $service->setRequestCpu('10m');
+        $service->setRequestMemory('128M');
+
         $service->addVirtualHost(null, 80, 'The URL to access PHPMyAdmin');
         CommonEvents::dispatchService($service);
     }
