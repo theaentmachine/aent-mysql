@@ -120,10 +120,15 @@ class StartEventCommand extends AbstractEventCommand
             return null;
         }
 
+        $additionalText = '';
+        if (\in_array(CommonMetadata::ENV_TYPE_PROD, $envTypes, true)) {
+            $additionalText = ' (this will not be installed on the production environment)';
+        }
+
         $this->output->writeln('<question>Hey!</question> You just installed MySQL. I can install <info>PHPMyAdmin</info> for you for the administration.');
 
-        $isPhpMyAdmin = $isAdditionalUser = $this->getAentHelper()
-            ->question('Do you want me to install PHPMyAdmin?')
+        $isPhpMyAdmin = $this->getAentHelper()
+            ->question('Do you want me to install PHPMyAdmin?'.$additionalText)
             ->yesNoQuestion()
             ->setDefault('y')
             ->ask();
@@ -143,6 +148,9 @@ class StartEventCommand extends AbstractEventCommand
 
         $service = new Service();
         foreach ($envTypes as $envType) {
+            if ($envType === CommonMetadata::ENV_TYPE_PROD) {
+                continue;
+            }
             $service->addDestEnvType($envType);
         }
 
