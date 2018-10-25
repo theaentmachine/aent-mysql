@@ -55,6 +55,7 @@ final class AddEvent extends AbstractServiceAddEvent
     private function createMySQLService(): Service
     {
         $service = new Service();
+        $service->setNeedBuild(false);
         $service->setServiceName($this->prompt->getPromptHelper()->getServiceName());
         $version = $this->prompt->getPromptHelper()->getVersion(self::MYSQL_IMAGE);
         $image = self::MYSQL_IMAGE . ':' . $version;
@@ -82,7 +83,7 @@ final class AddEvent extends AbstractServiceAddEvent
      */
     public function getDatabaseName(): string
     {
-        $text = 'Database name';
+        $text = "\nDatabase name";
         $helpText = 'The database name will be stored in the <info>MYSQL_DATABASE</info> environment variable.';
         return $this->prompt->input($text, $helpText, null, true, ValidatorHelper::getAlphaWithAdditionalCharactersValidator(['-', '_'])) ?? '';
     }
@@ -102,7 +103,7 @@ final class AddEvent extends AbstractServiceAddEvent
      */
     private function getMySQLUser(): string
     {
-        $text = 'Database user';
+        $text = "\nDatabase user";
         $helpText = 'The database user name will be stored in the <info>MYSQL_USER</info> environment variable.';
         return $this->prompt->input($text, $helpText, null, true, ValidatorHelper::getAlphaWithAdditionalCharactersValidator(['-', '_'])) ?? '';
     }
@@ -112,7 +113,7 @@ final class AddEvent extends AbstractServiceAddEvent
      */
     private function getMySQLNamedVolumeName(): string
     {
-        $text = 'MySQL named volume name';
+        $text = "\nMySQL named volume name";
         $helpText = 'The database files (located in the container in the <info>/var/lib/mysql</info> folder) will be stored in an external Docker volume.';
         return $this->prompt->input($text, $helpText, 'mysql-data', true, ValidatorHelper::getAlphaWithAdditionalCharactersValidator(['-', '_'])) ?? '';
     }
@@ -127,6 +128,7 @@ final class AddEvent extends AbstractServiceAddEvent
     private function createPhpMyAdminService(Service $mysqlService): Service
     {
         $service = new Service();
+        $service->setNeedBuild(false);
         $service->setServiceName($this->prompt->getPromptHelper()->getServiceName());
         $version = $this->prompt->getPromptHelper()->getVersion(self::PHPMYADMIN_IMAGE);
         $image = self::PHPMYADMIN_IMAGE . ':' . $version;
