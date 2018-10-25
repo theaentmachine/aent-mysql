@@ -55,7 +55,6 @@ final class AddEvent extends AbstractServiceAddEvent
     private function createMySQLService(): Service
     {
         $service = new Service();
-        $service->setNeedBuild(false);
         $service->setServiceName($this->prompt->getPromptHelper()->getServiceName());
         $version = $this->prompt->getPromptHelper()->getVersion(self::MYSQL_IMAGE);
         $image = self::MYSQL_IMAGE . ':' . $version;
@@ -64,13 +63,13 @@ final class AddEvent extends AbstractServiceAddEvent
         // Argument necessary on Kubernetes clusters (the volume has a lost+found dir at the root)
         $service->addCommand('--ignore-db-dir=lost+found');
         $service->addCommand('--max_allowed_packet=512M');
-        $rootPassword = $this->getMySQLPassword('Root password', 'The MySQL root password will be stored in the <info>MYSQL_ROOT_PASSWORD</info> environment variable.');
+        $rootPassword = $this->getMySQLPassword("\nRoot password", 'The MySQL root password will be stored in the <info>MYSQL_ROOT_PASSWORD</info> environment variable.');
         $service->addSharedSecret('MYSQL_ROOT_PASSWORD', $rootPassword, 'The password for the root user of MySQL', $service->getServiceName());
         $databaseName = $this->getDatabaseName();
         $service->addSharedEnvVariable('MYSQL_DATABASE', trim($databaseName), 'A default database, created on MySQL first startup', $service->getServiceName());
         $databaseUser = $this->getMySQLUser();
         $service->addSharedEnvVariable('MYSQL_USER', $databaseUser, 'A default user, created on MySQL first startup', $service->getServiceName());
-        $databaseUserPassword = $this->getMySQLPassword('Database user password', 'The MySQL user password will be stored in the <info>MYSQL_PASSWORD</info> environment variable.');
+        $databaseUserPassword = $this->getMySQLPassword("\nDatabase user password", 'The MySQL user password will be stored in the <info>MYSQL_PASSWORD</info> environment variable.');
         $service->addSharedSecret('MYSQL_PASSWORD', $databaseUserPassword, 'The password of the default user, created on MySQL first startup', $service->getServiceName());
         $this->output->writeln("\n👌 Alright, we're almost done! Let's configure a named volume where your MySQL data will be stored!");
         $volumeName = $this->getMySQLNamedVolumeName();
@@ -128,7 +127,6 @@ final class AddEvent extends AbstractServiceAddEvent
     private function createPhpMyAdminService(Service $mysqlService): Service
     {
         $service = new Service();
-        $service->setNeedBuild(false);
         $service->setServiceName($this->prompt->getPromptHelper()->getServiceName());
         $version = $this->prompt->getPromptHelper()->getVersion(self::PHPMYADMIN_IMAGE);
         $image = self::PHPMYADMIN_IMAGE . ':' . $version;
