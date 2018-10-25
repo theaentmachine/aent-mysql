@@ -55,6 +55,7 @@ final class AddEvent extends AbstractServiceAddEvent
     private function createMySQLService(): Service
     {
         $service = new Service();
+        $service->setNeedBuild(false);
         $service->setServiceName($this->prompt->getPromptHelper()->getServiceName());
         $version = $this->prompt->getPromptHelper()->getVersion(self::MYSQL_IMAGE);
         $image = self::MYSQL_IMAGE . ':' . $version;
@@ -127,6 +128,7 @@ final class AddEvent extends AbstractServiceAddEvent
     private function createPhpMyAdminService(Service $mysqlService): Service
     {
         $service = new Service();
+        $service->setNeedBuild(false);
         $service->setServiceName($this->prompt->getPromptHelper()->getServiceName());
         $version = $this->prompt->getPromptHelper()->getVersion(self::PHPMYADMIN_IMAGE);
         $image = self::PHPMYADMIN_IMAGE . ':' . $version;
