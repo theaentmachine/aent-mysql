@@ -3,11 +3,8 @@
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use TheAentMachine\AentApplication;
-use TheAentMachine\AentMysql\Command\StartEventCommand;
+use \TheAentMachine\Aent\ServiceAent;
+use \TheAentMachine\AentMysql\Event\AddEvent;
 
-$application = new AentApplication();
-
-$application->add(new StartEventCommand());
-
+$application = new ServiceAent("MySQL", new AddEvent());
 $application->run();
